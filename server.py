@@ -4,6 +4,7 @@ pip install flask
 """
 import os
 from flask import Flask, jsonify, request
+import requests
 
 
 app = Flask("EvilApi")
@@ -22,6 +23,58 @@ def id_exists(id, persons):
         if person["id"] == id:
             return True
     return False
+
+def broadcast_message(msg, subscribers):
+    for subscriber in subscribers:
+        endpoint = "http://{}:5000/api/v1/message".format(subscriber)
+        response = requests.put(url=endpoint, json={"msg": msg})
+        app.logger.debug(response.status_code)
+
+"""
+PUT /api/v1/message -> toma el mensaje que viene en el request como json y los imprime 
+                             por medio del log de debug.
+"""
+def print_message(msg):
+   if not request.is_json:
+        return jsonify({
+            "msg": "Only json is supported in this api"
+        }), 400
+    datos = request.get_json()
+    app.logger.debug(datos)
+    return jsonify({"msg": "mensaje recibido ok"}), 200
+
+"""
+POST /api/v1/message -> toma el mensaje y lo redistribuye a la lista de subscribers y 
+                              envía los requests por medio de PUT
+"""
+def spread_message(msg):
+    if not request.is_json:
+        return jsonify({
+            "msg": "Only json is supported in this api"
+        }), 400
+    datos = request.get_json()
+    app.logger.debug(datos)
+    for subscriber in subscribers:
+        endpoint = "http://{}:5000/api/v1/message".format(subscriber)
+        response = requests.post(url=endpoint, json={"msg": msg})
+        app.logger.debug(response.status_code)
+
+"""
+POST /api/v1/subscriber -> recibe un json con un único valor que se llama "ip" y lo
+                                 almacena en una lista en memoria de subscribers
+"""
+def list_subscriber(ip):
+    if not request.is_json:
+    return jsonify({
+        "msg": "Only json is supported in this api"
+    }), 400
+    datos = request.get_json()
+    for subscriber in subscribers:
+        endpoint = "http://{}:5000/api/v1/message".format(subscriber)
+        response = requests.put(url=endpoint, json={"msg": msg})
+        app.logger.debug(response.status_code)
+    return jsonify({"msg": "almacenado en la lista de subscribers"}), 200
+
 
 def post_subscriber():
     if not request.is_json:
